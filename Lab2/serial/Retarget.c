@@ -22,24 +22,24 @@ FILE __stdout;
 
 
 int fputc(int ch, FILE *f) {
-int tmp = sendchar(ch);
-if( ch == '\n' ) sendchar('\r');
-  return (tmp);
+	int tmp = sendchar(ch);
+	if( ch == '\n' ) sendchar('\r');
+	return (tmp);
 }
 
 
 int ferror(FILE *f) {
-  /* Your implementation of ferror */
-  return EOF;
+	/* Your implementation of ferror */
+	return EOF;
 }
 
 
 void _ttywrch(int ch) {
-  sendchar(ch);
-  if( ch == '\n' ) sendchar('\r');
+	sendchar(ch);
+	if( ch == '\n' ) sendchar('\r');
 }
 
 
 void _sys_exit(int return_code) {
-label:  goto label;  /* endless loop */
+label:	goto label;  /* endless loop */
 }
