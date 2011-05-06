@@ -1,5 +1,7 @@
+*.tmp
 #VIM
 *.swp
+*.swo
 #Output Files
 *.o
 *.old
@@ -19,3 +21,5 @@
 *.axf
 #KDE
 .directory
+#UV4
+*.uvopt
