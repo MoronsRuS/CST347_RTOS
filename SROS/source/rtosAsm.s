@@ -136,6 +136,9 @@ block
             STMIA   R1, {R0-R14}            
                                         ;saved registers R0-R14 in 
                                         ;the running threadObject.
+
+            LDR     R3, =0              ;Load 0 to reset this threads time part.
+            STR     R3, [R1, #threadObject_t_timePart_offset]
             
             STR     R14, [R1, #(15*4)]      
                                         ;save the return address as the 
@@ -202,6 +205,8 @@ sleep
             
             ASSERT  threadObject_t_R_offset = 0
             
+            LDR     R3, =0                  ;Load 0 to reset this threads time part.
+            STR     R3, [R0, #threadObject_t_timePart_offset]
             STMIA   R0, {R0-R14}            ;saved all registers R0-R14 in the
                                             ;ready thread.
             
@@ -430,6 +435,11 @@ start_high_priority_thread
         
         STR     R0, [R1]        ;store runninThreadObject pointer.
         
+        LDR     R1, [R0, #threadObject_t_timePart_offset]
+        LDR     R2, =TIME_QUANTUM;Load the time quantum into a register
+        CMP     R1, #0          ;if timePart == 0 set it to TIME_QUANTUM
+        STREQ   R2 , [R0, #threadObject_t_timePart_offset]
+        
         LDR     R12, [R0, #threadObject_t_cpsr_offset]  
                                 ;get the cpsr of the threadObject.
         
@@ -570,6 +580,10 @@ threadObjectName_offset EQU 20
             STR     R1, [$threadObjectPtrR0, \
                             #threadObject_t_threadObjectName_offset]    
                                         ;save name pointer.
+            LDR     R1, =0              ;R1=0 (timePart = 0)
+            
+            STR     R1, [$threadObjectPtrR0, #threadObject_t_timePart_offset]    
+                                        ;save timePart.
             
             MOV     R1, #0      ;R1=0
             

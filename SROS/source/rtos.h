@@ -40,6 +40,8 @@ typedef struct _threadObject_
     
     char   *threadObjectName;
 
+    int32 timePart;
+
 }threadObject_t;
 
 
@@ -134,6 +136,6 @@ void block(void);
 void timerTick(void);
 void sleep(int32 noOfTicks);
 void timerTick(void);
-
+void irq_interrupt_handler(void);
 
 #endif

@@ -88,7 +88,8 @@ void listObjectInit(listObject_t *listObjectPtr)
 Description:
 This function insert a new listNode into the linked list. The linked
 list hold the threadObjects as it's elements. It take "newThreadObject"
-and insert it at appropriate place in the list according to the priority.
+and insert it at appropriate place in the list according to the priority
+and time remaining in it's time quantum.  Non-zero time left gets put sooner.
 All the threadObjects in the list are stored in the descending order of
 priority. (Note lower the priority number, higher the priority).
 In each list node, the "priority" field of threadObject is noted into
@@ -99,6 +100,7 @@ void listObjectInsert(listObject_t *listNodePtr,
 {
     listNode_t *newListNodePtr;
     uint32 newThreadObjectPriority;
+    int32 newThreadObjectTime;
     
     assert(newThreadObject != 0);
     assert(newThreadObject->waitListResource == 0);
@@ -108,16 +110,30 @@ void listObjectInsert(listObject_t *listNodePtr,
     newThreadObject->waitListResource = listNodePtr;
     
     newThreadObjectPriority = newThreadObject->priority;
+    newThreadObjectTime = newThreadObject->timePart;//Current time remaining
     //listObject first element is dummy head. Its auxInfo hold 
     //the number of list nodes available in the list.
     //So the count is increased when inserting an element.
     listNodePtr->auxInfo++;
 
-    //parse the list till we reach the correct place for the newThreadObject.
-    while(listNodePtr->nextListNode != 0 && 
-        listNodePtr->nextListNode->auxInfo <= newThreadObjectPriority)
-    {
-        listNodePtr = listNodePtr->nextListNode;
+    if (newThreadObjectTime != 0) {
+	    //parse the list till we reach the correct place for the newThreadObject.
+	    while
+	    (
+	        listNodePtr->nextListNode != 0
+		&& listNodePtr->nextListNode->auxInfo <= newThreadObjectPriority
+		&& listNodePtr->nextListNode->element->timePart != 0
+            )
+	    {
+		listNodePtr = listNodePtr->nextListNode;
+	    }
+    } else {
+	    //parse the list till we reach the correct place for the newThreadObject.
+	    while(listNodePtr->nextListNode != 0 && 
+		listNodePtr->nextListNode->auxInfo <= newThreadObjectPriority)
+	    {
+		listNodePtr = listNodePtr->nextListNode;
+	    }
     }
 
     //allocate and initialize the new node.
@@ -296,6 +312,8 @@ int is_thread_switch_needed(void)
     
     int returnValue = 0;
     
+    if(runningThreadObjectPtr->timePart == 0) return 1;//If our time part is over.
+    
     if(readyList.auxInfo > 0)   //if the number of threads in the ready list > 0
     {
         if((readyList.nextListNode)->auxInfo < runningThreadObjectPtr->priority)
@@ -429,6 +447,9 @@ void timerTick(void)
 {
     listObject_t *freedListNodePtr;
     
+//    printf("timertick; %s; %d\n", runningThreadObjectPtr->threadObjectName, runningThreadObjectPtr->timePart);
+    assert(runningThreadObjectPtr->timePart > 0);
+    runningThreadObjectPtr->timePart--;
     time++;
     //decrease the waiting time by 1.
     if(timerList.auxInfo > 0)

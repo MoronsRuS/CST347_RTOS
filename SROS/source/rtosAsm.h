@@ -3,6 +3,8 @@
                             GBLS    __rtosAsm_h__
 __rtosAsm_h__               SETS    "1"
 
+TIME_QUANTUM            EQU     10
+
 USER_MODE               EQU     2_10000
 SYSTEM_MODE             EQU     2_11111
 FIQ_MODE                EQU     2_10001
@@ -123,7 +125,8 @@ threadObject_t_priority_offset          EQU     68
 threadObject_t_waitListResource_offset  EQU     72
 threadObject_t_waitListTimer_offset     EQU     76
 threadObject_t_threadObjectName_offset  EQU     80
-threadObject_t_size                     EQU     84
+threadObject_t_timePart_offset          EQU     84
+threadObject_t_size                     EQU     88
         
 mailboxObject_t_mailboxBuffer_offset    EQU     0
 mailboxObject_t_readIndex_offset        EQU     4

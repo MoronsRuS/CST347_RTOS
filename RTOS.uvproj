@@ -441,14 +441,9 @@
           <GroupName>?</GroupName>
           <Files>
             <File>
-              <FileName>testSemaphoreObject.c</FileName>
+              <FileName>main.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\SROS\armTestBench\testSemaphoreObject.c</FilePath>
-            </File>
-            <File>
-              <FileName>sampleInterruptServiceRoutine.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\SROS\armTestBench\sampleInterruptServiceRoutine.c</FilePath>
+              <FilePath>.\main.c</FilePath>
             </File>
           </Files>
         </Group>
