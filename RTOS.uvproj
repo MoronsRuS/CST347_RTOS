@@ -42,8 +42,8 @@
             <NotGenerated>0</NotGenerated>
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
-          <OutputDirectory>.\</OutputDirectory>
-          <OutputName>Lab2</OutputName>
+          <OutputDirectory>.\out\</OutputDirectory>
+          <OutputName>RTOS</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
