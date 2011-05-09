@@ -2,6 +2,7 @@
 #VIM
 *.swp
 *.swo
+*.vim
 #Output Files
 *.o
 *.old

@@ -64,12 +64,14 @@ mutexObjectLock
             
             CMP     R2, #1          ;if(mutex == 1)
             
+mutexObjectLock_success             ;Restore successful thread here.
             MOVEQ   R0, #1          ;if(mutex == 1) returnValue = 1.
             
             BXEQ    LR              ;if(mutex == 1) return returnValue.
             
             CMP     R1, #0          ;if(waitTime == 0)
             
+mutexObjectLock_failure             ;Restore timed-out thread here.
             MOVEQ   R0, #0          ;if(mutex == 0 and waitTime == 0) 
                                     ;then returnValue = 0
             
@@ -82,6 +84,8 @@ mutexObjectLock
             ;in timerList too
             ;and jump to scheduler.
             
+            CMP     R2, R2          ;Set condition to 'equal', so the thread
+                                    ;will be saved 
             ;interruptDisable()
             INTERRUPTS_SAVE_DISABLE oldCPSR, R2, R3
             
@@ -96,10 +100,14 @@ mutexObjectLock
             STMIA   R3, {R0-R14}            ;save all registers R0-R14 in 
                                             ;the running threadObject
             
-            ADR     R4, mutexObjectLock     ;get the address of this function. 
-                                            ;(to start this thread later).
-                                            ;R4=mutexObjectLock
-            
+;           ADR     R4, mutexObjectLock     ;get the address of this function. 
+;                                           ;(to start this thread later).
+;                                           ;R4=mutexObjectLock
+
+            ADR     R4, mutexObjectLock_failure ;get the address of failure. 
+                                                ;(to start this thread later).
+                                                ;R4=mutexObjectLock_failure
+
             STR     R4, [R3, #(15*4)]       ;save it as the PC to start later.
             
             LDR     R4, =oldCPSR
@@ -186,12 +194,6 @@ mutexObjectRelease
             
             INTERRUPTS_SAVE_DISABLE oldCPSR, R1, R2
             
-            MOV     R1, #1  ;R1=1
-            
-            ASSERT mutexObject_t_mutex_offset = 0
-            
-            SWP     R1, R1, [R0]    ;mutexObject->mutex = 1;
-            
             LDR     R1, [R0, #(mutexObject_t_waitList_offset+ \
                                     listObject_t_auxInfo_offset)] 
                                 ;R1=listObjectCount(&mutexObjectPtr->waitList)
@@ -208,9 +210,19 @@ mutexObjectRelease
             STMFD   SP!, {R14}  ;saving R14 to make function call.
             
             ;listObjectDelete(&mutexObjectPtr->waitList)
+            ;NOTE: This call is made while the stack is not 8 byte 
+            ;aligned.  Currently it doesn't matter because 
+            ;listObjectDelete doesn't need an 8 byte aligned stack
+            ;and it doesn't call anything.
             BL      listObjectDelete    
                                 ;After returning from the function, 
                                 ;R0 contain waitingThreadObjectPtr
+            ADR     R1, mutexObjectLock_success ;get the address of success in 
+                                                ;the lock function.
+                                                ;(to start this thread later).
+                                                ;R1=mutexObjectLock_success
+
+            STR     R1, [R0, #(15*4)]       ;save it as the PC to start later.
             
             MOV     R1, R0      ;R1=waitingThreadObjectPtr
             
@@ -305,6 +317,12 @@ mutexObjectRelease
             
             
 no_thread_waiting_for_mutex
+            MOV     R1, #1  ;R1=1
+            
+            ASSERT mutexObject_t_mutex_offset = 0
+            
+            SWP     R1, R1, [R0]    ;mutexObject->mutex = 1 (unlocked);
+            
 waiting_thread_does_not_have_high_priority
 called_from_interrupt_service_routine
             
