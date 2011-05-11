@@ -1,5 +1,4 @@
             PRESERVE8 {TRUE}
-			
 			INCLUDE rtosAsm.h
             
             IMPORT  runningThreadObjectPtr
