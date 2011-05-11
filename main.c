@@ -5,11 +5,20 @@
 #include <rtos.h>
 
 #include <lcd.h>
+#include "rwLockObject/rwLockObject.h"
 
-threadObject_t thread1, thread2;
-void function1(void);
-void function2(void);
-int32 stack1[1000], stack2[1000];
+#define READER_THREADS	3
+#define WRITER_THREADS	3
+threadObject_t writerThread[3];
+threadObject_t readerThread[3];
+void writer(int32 num);
+void reader(int32 num);
+int32 writerStack[3][1000];
+int32 readerStack[3][1000];
+int32 share=0;
+rwLockObject_t shareLock;
+char writerNames[3][10] = {"writer(0)","writer(1)","writer(2)"};
+char readerNames[3][10] = {"reader(0)","reader(1)","reader(2)"};
 
 /* Import external functions from Serial.c file                               */
 extern       void init_serial    (void);
@@ -29,6 +38,7 @@ void LED_Out(unsigned int value) {
 
 int main(void)
 {
+	int i=0;
 	LED_Init();
 	LED_Out(0x55);
 
@@ -36,9 +46,11 @@ int main(void)
 	
 	lcd_init();
 	lcd_clear();
-	lcd_print ("  SROS Lab3  ");
+	lcd_print ("  SROS Lab4  ");
 	set_cursor (0, 1);
  	 
+	
+	rwLockObjectInit(&shareLock);
 	
 	printf("\n\n\n\n==MAIN==\n");
 	lcd_print ("==MAIN==");
@@ -48,31 +60,35 @@ int main(void)
 	set_cursor (0, 1);
 	lcd_print ("==DONE INIT==");
     
-	threadObjectCreate(
-		&thread1,
-		(void *)function1,
-		0,
-		0,
-		0,
-		0,
-		&stack1[1000],
-		1,
-		INITIAL_CPSR_ARM_FUNCTION,
-		"thread1"
-	);
+	for (i=0;i<WRITER_THREADS;++i) {
+		threadObjectCreate(
+			&(writerThread[i]),
+			(void *)writer,
+			i,
+			0,
+			0,
+			0,
+			&writerStack[i][1000],
+			1,
+			INITIAL_CPSR_ARM_FUNCTION,
+			writerNames[i]
+		);
+	}
                         
-	threadObjectCreate(
-		&thread2,
-		(void *)function2,
-		0,
-		0,
-		0,
-		0,
-		&stack2[1000],
-		1,
-		INITIAL_CPSR_ARM_FUNCTION,
-		"thread2"
-	);
+	for (i=0;i<READER_THREADS;++i) {
+		threadObjectCreate(
+			&(readerThread[i]),
+			(void *)reader,
+			i,
+			0,
+			0,
+			0,
+			&readerStack[i][1000],
+			1,
+			INITIAL_CPSR_ARM_FUNCTION,
+			readerNames[i]
+		);
+	}
                         
 	srand(1);
                         
@@ -89,19 +105,21 @@ int main(void)
 }                       
                         
                         
-void function1(void)
+void writer(int32 num)
 {
-	unsigned int count;
-	while(1) {
-		LED_Out(count++);
+	while (1) {
+		rwLockObjectLockWriter(&shareLock);
+		printf("Writer(%d):%d\n",num,++share);
+		rwLockObjectRelease(&shareLock);
 	}
 }
                     
-void function2(void)
+void reader(int32 num)
 {
-	unsigned int count;
-	while(1) {
-		printf("%d\n",count++);
+	while (1) {
+		rwLockObjectLockReader(&shareLock);
+		printf("Reader(%d):%d\n",num,share);
+		rwLockObjectRelease(&shareLock);
 	}
 }
                     

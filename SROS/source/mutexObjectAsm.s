@@ -1,3 +1,4 @@
+            PRESERVE8 {TRUE}
             INCLUDE rtosAsm.h
             
             IMPORT  runningThreadObjectPtr
@@ -65,6 +66,9 @@ mutexObjectLock
             CMP     R2, #1          ;if(mutex == 1)
             
 mutexObjectLock_success             ;Restore successful thread here.
+                                    ;Threads restore with 'equal' in 
+                                    ;the condition code.
+
             MOVEQ   R0, #1          ;if(mutex == 1) returnValue = 1.
             
             BXEQ    LR              ;if(mutex == 1) return returnValue.
@@ -72,6 +76,9 @@ mutexObjectLock_success             ;Restore successful thread here.
             CMP     R1, #0          ;if(waitTime == 0)
             
 mutexObjectLock_failure             ;Restore timed-out thread here.
+                                    ;Threads restore with 'equal' in 
+                                    ;the condition code.
+
             MOVEQ   R0, #0          ;if(mutex == 0 and waitTime == 0) 
                                     ;then returnValue = 0
             
@@ -85,7 +92,8 @@ mutexObjectLock_failure             ;Restore timed-out thread here.
             ;and jump to scheduler.
             
             CMP     R2, R2          ;Set condition to 'equal', so the thread
-                                    ;will be saved 
+                                    ;will be saved with 'equal' in the 
+                                    ;condition code.
             ;interruptDisable()
             INTERRUPTS_SAVE_DISABLE oldCPSR, R2, R3
             

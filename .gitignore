@@ -19,6 +19,7 @@
 *.crf
 *.d
 *._ia
+*.__i
 *.axf
 #KDE
 .directory
