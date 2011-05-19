@@ -445,6 +445,11 @@
               <FileType>1</FileType>
               <FilePath>.\main.c</FilePath>
             </File>
+            <File>
+              <FileName>rwLockObject.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\rwLockObject\rwLockObject.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
