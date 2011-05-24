@@ -126,7 +126,9 @@ threadObject_t_waitListResource_offset  EQU     72
 threadObject_t_waitListTimer_offset     EQU     76
 threadObject_t_threadObjectName_offset  EQU     80
 threadObject_t_timePart_offset          EQU     84
-threadObject_t_size                     EQU     88
+threadObject_t_innatePriority_offset    EQU     88
+threadObject_t_promotionList_offset     EQU     92
+threadObject_t_size                     EQU     (92+listObject_t_size)
         
 mailboxObject_t_mailboxBuffer_offset    EQU     0
 mailboxObject_t_readIndex_offset        EQU     4
