@@ -42,6 +42,10 @@ typedef struct _threadObject_
 
     int32 timePart;
 
+    uint32 innatePriority;
+
+    struct _listObject_ promotionList;
+
 }threadObject_t;
 
 
