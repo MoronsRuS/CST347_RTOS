@@ -670,4 +670,224 @@ context_switch_not_needed
         
         
 
+
+;int32 listObjectWait(listObject_t *waitListPtr, int32 waitTime, int32 returnValue);
+        AREA    listObjectWait_code, CODE
+listObjectWait
+            CMP     R1, #0             ;if (waitTime == 0)
+            MOVEQ   R0, R2             ;
+            BXEQ    LR                 ;return (returnValue);
+
+            ;If waitTime != 0 then suspend current thread to waitList.
+            ;If waiting for a limited time, keep the threadObject 
+            ;in timerList too and jump to scheduler.
+
+            STMFD   SP!, {R2}          ;save R2
+            
+            ;interruptDisable()
+            INTERRUPTS_SAVE_DISABLE oldCPSR, R2, R3
+            
+            LDMFD   SP!, {R2}          ;restore R2          
+            ;creating thread object for the current thread.
+            LDR     R3, =runningThreadObjectPtr     
+                                       ;R3=&runningThreadObjectPtr
+            
+            LDR     R3, [R3]           ;R3=runningThreadObjectPtr
+            
+            ASSERT  threadObject_t_R_offset = 0
+            
+            STMIA   R3, {R0-R14}            ;save all registers R0-R14 in 
+                                            ;the running threadObject
+
+            STR     R2, [R3]                ;runningThreadObjectPtr->R[0] = R2
+                                            ;save returnValue as the return value
+            
+
+            ADR     R4, listObjectWait_return   ;get the address of the end of this
+                                                ;function. (to start this thread later).
+                                                ;R4=listObjectWait_return
+
+            STR     R4, [R3, #(15*4)]       ;save it as the PC to start later.
+            
+            LDR     R4, =oldCPSR
+            
+            LDR     R4, [R4]                ;get original status of the thread
+                                            ;before masking interrupts.
+            
+            STR     R4, [R3, #threadObject_t_cpsr_offset] 
+                                            ;save the status of the thread.
+            
+            ;insert the running thread into waitList of mutexObject.
+            
+                                            ;R0=waitListPtr.
+            
+            MOV     R1, R3                  ;R1=&runningThreadObjectPtr
+
+            MOV     R4, R0                  ;save waitListPtr for next call
+            
+            BL      listObjectInsert;
+            
+            ;insert the running thread into the waitList of timerList.
+            
+            LDR     R0, =runningThreadObjectPtr     
+                                            ;R0 =&&runningThreadObject
+            
+            LDR     R0, [R0]                ;R0=&runningThreadObject
+            
+            LDR     R1, [R0, #threadObject_t_R_offset] 
+                                            ;R1=R0 of running 
+                                            ;threadObject=mutexObjectPtr
+            
+            MOV     R1, R4                  ;R1 = waitListPtr
+            
+            LDR     R2, [R0, #(threadObject_t_R_offset+4)]  
+                                            ;R2=waitTime
+            
+            CMP     R2, #0                  ;if(waitTime > 0)
+
+            ;insertIntoTimerList(&runningThread, waitList). 
+            ;R1 register of threadObject alwasy holds the waitTime.
+            BLGT    insertIntoTimerList     
+                                            
+            ;jump to scheduler
+            
+            B       scheduler
+
+listObjectWait_return
+            BX      LR
+
+;int32 listObjectSignal(listObject_t *waitListPtr, int32 returnValue);
+        AREA    listObjectSignal_code, CODE
+listObjectSignal
+
+            ;interruptsDisable
+            
+            INTERRUPTS_SAVE_DISABLE oldCPSR, R1, R2
+            
+            LDR     R2, [R0, #(listObject_t_auxInfo_offset)] 
+                                ;R2=listObjectCount(&waitListPtr)
+            
+            CMP     R2, #0
+            
+            BEQ     no_thread_to_signal;
+            
+            ;some thread is waiting for this mutex.
+            
+                                ;R0=waitListPtr.
+            
+            STMFD   SP!, {R14}  ;saving R14 to make function call.
+            STMFD   SP!, {R1}   ;saving R1 to make function call.
+            
+            ;listObjectDelete(waitListPtr)
+            BL      listObjectDelete    
+                                ;After returning from the function, 
+                                ;R0 contain waitingThreadObjectPtr
+
+            LDMFD   SP!, {R1}   ;R1 = returnValue
+
+            STR     R1, [R0]    ;waitingThreadObjectPtr->R[0] = returnValue
+            
+            MOV     R1, R0      ;R1=waitingThreadObjectPtr
+            
+            LDR     R0, =readyList  
+                                ;R0 = &readyList.
+            
+            STMFD   SP!, {R1}   ;Save waitingThreadObjectPtr as we are 
+                                ;going to make a function call.
+            
+            BL      listObjectInsert 
+                                ;insert waiting thread object into 
+                                ;ready list.
+            
+            LDR     R0, [SP]        ;We get R0=waitingThreadObjectPtr
+            
+            LDR     R1, [R0, #(threadObject_t_R_offset+4)]  ;R1=waitTime
+            
+            CMP     R1, #0          ;if(waitTime >= 0)
+            
+            BLGE    deleteFromTimerList
+            ;deleteFromTimerList(waitingThreadObjectPtr) 
+            ;(when waitTime greater than or equal to 0, this threadObject will
+            ;be in timerList).
+            
+            ;Now check if the waiting thread has higher priority than the 
+            ;current running thread. and switch to the  waiting thread if 
+            ;that has high priority.
+            
+            LDMFD   SP!, {R0, R14}
+                                ;R0=waitingThreadObjectPtr, 
+                                ;R14=return address from this function.
+            
+            LDR     R1, =runningThreadObjectPtr 
+                                ;R1=&runningThreadObjectPtr     
+            
+            LDR     R1, [R1]
+            
+            LDR     R2, [R0, #threadObject_t_priority_offset] 
+                                ;R2=waitingThreadObjectPtr->priority
+            
+            LDR     R3, [R1, #threadObject_t_priority_offset]   
+                                ;R3=runningThreadObject.priority.
+            
+            CMP     R2, R3      ;if(waitingThreadObjectPtr->priority < 
+                                ;runningThreadObject.priority)
+            
+            BHS     waiting_thread_does_not_have_high_priority;
+            
+            ;check whether we are coming from the interrupt service routine. 
+            ;If we are coming from the interrupt service routine we should
+            ;not make context switch. IRQ_handler will do the context switch.
+            
+            MRS     R2, CPSR
+            
+            AND     R2, R2, #0x1F
+                                ;keep only mode bits.
+            
+            CMP     R2, #IRQ_MODE       
+                                ;if(currentMode == IRQ_MODE)
+            
+            BEQ     called_from_interrupt_service_routine
+            
+            ;This function is called from user/system mode.
+            ;waiting thread has higher priority.
+            ;save running thread context to readyList and call scheduler.
+            
+            STMIA   R1, {R0-R14}
+                                ;save registers for running thread.
+            
+            STR     R14, [R1, #(15*4)]  
+                                ;saving the return address as starting 
+                                ;program counter.
+            
+            LDR     R2, =oldCPSR
+            
+            LDR     R2, [R2]    ;get status.
+            
+            SET_STATE_OF_PC_IN_CPSR R14, R2 
+                                ;set the correct state in CPSR for the 
+                                ;starting the thread next time.
+                                ;(add the state bit correctly).
+            
+            STR     R2, [R1, #threadObject_t_cpsr_offset]   ;save status.
+            
+            LDR     R0, =readyList  
+                                ;R0=&readyList.
+            
+            BL      listObjectInsert 
+                                ;Insert the running thread into readyList
+            
+            B       scheduler   ;Jump to scheduler.
+            
+            
+no_thread_to_signal
+            MOV     R0, #0      ;No thread was waiting
+waiting_thread_does_not_have_high_priority
+called_from_interrupt_service_routine
+            
+            ;interruptsRestore()
+            INTERRUPTS_RESTORE oldCPSR, R1
+            
+            BX      LR
+
             END
+
