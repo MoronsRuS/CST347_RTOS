@@ -6,4 +6,3 @@ Assembly is not (probably not PRESERVE8 compatible but files have been labeled a
 such to facilitate compiling)
 
 TODO:
-	Ipmlement a promote list for threads so they know what priorty to assume.

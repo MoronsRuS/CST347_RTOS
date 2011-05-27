@@ -2,7 +2,7 @@
 #include "assert.h"
 
 #define MAX_THREADS_IN_THE_SYSTEM   100
-#define MAX_LIST_NODES              3*MAX_THREADS_IN_THE_SYSTEM
+#define MAX_LIST_NODES              2*MAX_THREADS_IN_THE_SYSTEM
 listNode_t listNodes[MAX_LIST_NODES];
 uint32     listNodesAvailableCount;
 listNode_t *listNodesAvailable[MAX_LIST_NODES];
@@ -555,8 +555,7 @@ Description:
 This function remove the threadObject from the system.
 This function remove the threadObject from the any waitList or readyList if 
 it is waiting for a resource. This function remove the threadObject from 
-timerList if it is waiting for timeout. This function deallocates any nodes 
-in the promotionList.
+timerList if it is waiting for timeout.
 */
 void threadObjectDestroy(threadObject_t *threadObjectPtr)
 {
@@ -579,10 +578,6 @@ void threadObjectDestroy(threadObject_t *threadObjectPtr)
         assert(timerList.auxInfo > 0);
         
         deleteFromTimerList(threadObjectPtr);
-    }
-
-    for (i=0; i<threadObjectPtr->promotionList.auxInfo; ++i) {
-	    listObjectWaitListDelete(&(threadObjectPtr->promotionList));
     }
     
     interrupt_restore();

@@ -2,7 +2,6 @@
 			INCLUDE rtosAsm.h
             
             IMPORT  runningThreadObjectPtr
-            IMPORT  listObjectInit
             IMPORT  listObjectWaitListInsert
             IMPORT  listObjectWaitListDelete
             IMPORT  readyList
@@ -568,9 +567,6 @@ threadObjectName_offset EQU 20
             STR     R12, [$threadObjectPtrR0, #threadObject_t_priority_offset]  
                                         ;threadObjectPtr->priority=priority.
             
-            STR     R12, [$threadObjectPtrR0, #threadObject_t_innatePriority_offset]  
-                                        ;threadObjectPtr->innatePriority=priority.
-            
             LDR     R1, [SP, #cpsr_offset]  
                                         ;R1=cpsr
             
@@ -595,10 +591,6 @@ threadObjectName_offset EQU 20
             
             STR     R1, [$threadObjectPtrR0, #threadObject_t_waitListResource_offset]   
             ;waitListResource should be 0 before inserting into any list.
-
-            LDR     R1, =threadObject_t_promotionList_offset
-            ADD     R0, $threadObjectPtrR0, R1              ;R0 = &(threadObjectPtr->promotionList)
-            BL      listObjectInit
                         
             INTERRUPTS_SAVE_DISABLE oldCPSR, R1, R2
             
