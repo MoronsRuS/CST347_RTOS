@@ -2,8 +2,8 @@
             INCLUDE rtosAsm.h
             
             IMPORT  runningThreadObjectPtr
-            IMPORT  listObjectInsert
-            IMPORT  listObjectDelete
+            IMPORT  listObjectWaitListInsert
+            IMPORT  listObjectWaitListDelete
             IMPORT  readyList
             IMPORT  scheduler
             IMPORT  oldCPSR
@@ -35,7 +35,7 @@
 ;           get the context which should be functionally equivalent to starting
 ;           of this function and store that context in the running 
 ;           threadObject i.e. context space of running thread.
-;           listObjectInsert(&mutexObjectPtr->waitList,
+;           listObjectWaitListInsert(&mutexObjectPtr->waitList,
 ;           runningThreadObjectPtr);
 ;           if(waitTime > 0)
 ;           {
@@ -134,7 +134,7 @@ mutexObjectLock_failure             ;Restore timed-out thread here.
             MOV     R1, R3                                 
                                             ;R1=&runningThreadObjectPtr
             
-            BL      listObjectInsert;
+            BL      listObjectWaitListInsert;
             
             ;insert the running thread into the waitList of timerList.
             
@@ -174,8 +174,8 @@ mutexObjectLock_failure             ;Restore timed-out thread here.
 ;   mutexObjectPtr->mutex = 1;
 ;   if(listObjectCount(&mutexObjectPtr->waitList))
 ;   {
-;       waitingThreadObjectPtr=listObjectDelete(&mutexObjectPtr->waitList);
-;       listObjectInsert(&readyList,waitingThreadObjectPtr);
+;       waitingThreadObjectPtr=listObjectWaitListDelete(&mutexObjectPtr->waitList);
+;       listObjectWaitListInsert(&readyList,waitingThreadObjectPtr);
 ;       if(waitingThreadObjectPtr->waitTime >= 0)
 ;       {
 ;           deleteFromTimerList(waitingThreadObjectPtr);
@@ -186,7 +186,7 @@ mutexObjectLock_failure             ;Restore timed-out thread here.
 ;           get the context functionally equivalent to the end 
 ;           this function and save that context into running
 ;           threadObject.
-;           listObjectInsert(&readyList,&runningThreadObject);
+;           listObjectWaitListInsert(&readyList,&runningThreadObject);
 ;           jump to scheduler();
 ;       }
 ;   }
@@ -217,12 +217,12 @@ mutexObjectRelease
             
             STMFD   SP!, {R14}  ;saving R14 to make function call.
             
-            ;listObjectDelete(&mutexObjectPtr->waitList)
+            ;listObjectWaitListDelete(&mutexObjectPtr->waitList)
             ;NOTE: This call is made while the stack is not 8 byte 
             ;aligned.  Currently it doesn't matter because 
-            ;listObjectDelete doesn't need an 8 byte aligned stack
+            ;listObjectWaitListDelete doesn't need an 8 byte aligned stack
             ;and it doesn't call anything.
-            BL      listObjectDelete    
+            BL      listObjectWaitListDelete    
                                 ;After returning from the function, 
                                 ;R0 contain waitingThreadObjectPtr
             ADR     R1, mutexObjectLock_success ;get the address of success in 
@@ -240,7 +240,7 @@ mutexObjectRelease
             STMFD   SP!, {R1}   ;Save waitingThreadObjectPtr as we are 
                                 ;going to make a function call.
             
-            BL      listObjectInsert 
+            BL      listObjectWaitListInsert 
                                 ;insert waiting thread object into 
                                 ;ready list.
             
@@ -318,7 +318,7 @@ mutexObjectRelease
             LDR     R0, =readyList  
                                 ;R0=&readyList.
             
-            BL      listObjectInsert 
+            BL      listObjectWaitListInsert 
                                 ;Insert the running thread into readyList
             
             B       scheduler   ;Jump to scheduler.

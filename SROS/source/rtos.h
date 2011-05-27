@@ -88,10 +88,12 @@ void listObjectModuleInit(void);
 void listObjectInit(listObject_t *listObjectPtr);
 
 void listObjectInsert(listObject_t *listNodePtr, threadObject_t *newThreadObject);
-
 threadObject_t *listObjectDelete(listObject_t *listObjectPtr);
-
 void listObjectDeleteMiddle(listObject_t *waitList, threadObject_t *threadObjectToBeDeleted);
+
+void listObjectWaitListInsert(listObject_t *listNodePtr, threadObject_t *newThreadObject);
+threadObject_t *listObjectWaitListDelete(listObject_t *listObjectPtr);
+void listObjectWaitListDeleteMiddle(listObject_t *waitList, threadObject_t *threadObjectToBeDeleted);
 
 int32 listObjectCount(listObject_t *listObjectPtr);
 

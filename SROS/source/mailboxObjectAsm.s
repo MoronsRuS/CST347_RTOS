@@ -1,8 +1,8 @@
             INCLUDE rtosAsm.h
             
             IMPORT  runningThreadObjectPtr
-            IMPORT  listObjectInsert
-            IMPORT  listObjectDelete
+            IMPORT  listObjectWaitListInsert
+            IMPORT  listObjectWaitListDelete
             IMPORT  readyList
             IMPORT  scheduler
             IMPORT  oldCPSR
@@ -53,9 +53,9 @@
 ;       if(listObjectCount(&mailboxObjectPtr->waitList) > 0)
 ;       {
 ;           waitingThreadObjectPtr = 
-;                       listObjectDelete(&mailboxObjectPtr->waitList);
+;                       listObjectWaitListDelete(&mailboxObjectPtr->waitList);
 ;           assert(waitingThreadObjectPtr != NULL);
-;           listObjectInsert(readyList, waitingThreadObjectPtr);
+;           listObjectWaitListInsert(readyList, waitingThreadObjectPtr);
 ;           if(waitingThreadObjectPtr->waitTime >= 0)
 ;           {
 ;               deleteFromTimerList(waitingThreadObjectPtr);
@@ -65,7 +65,7 @@
 ;           {
 ;               get the context same as the end of this function
 ;               and insert into the running threadObject.
-;               listObjectInsert(&readyList, &runningThreadObject);
+;               listObjectWaitListInsert(&readyList, &runningThreadObject);
 ;               jump to scheduler();
 ;           }
 ;       }
@@ -76,7 +76,7 @@
 ;       {
 ;           get the context of starting of the function into running 
 ;           threadObject.
-;           listObjectInsert(mailboxObjectPtr->waitList, &runningThreadObject);
+;           listObjectWaitListInsert(mailboxObjectPtr->waitList, &runningThreadObject);
 ;           if(waitTime > 0)
 ;           {
 ;               insertIntoTimerList(&runningThread, mailboxObjectPtr->waitList);
@@ -190,8 +190,8 @@ mailboxObjectPend
                                     ;first to make function call from here.
         
         ;waitingThreadObjectPtr = 
-        ;                   listObjectDelete(&mailboxObjectPtr->waitList);
-        BL      listObjectDelete    
+        ;                   listObjectWaitListDelete(&mailboxObjectPtr->waitList);
+        BL      listObjectWaitListDelete    
                         ;After this function R0 = waitingThreadObjectPtr
         
         STMFD   SP!, {R0}           
@@ -201,8 +201,8 @@ mailboxObjectPend
         
         LDR     R0, =readyList  ;R0=&readyList
         
-        ;listObjectInsert(readyList, waitingThreadObjectPtr);
-        BL      listObjectInsert
+        ;listObjectWaitListInsert(readyList, waitingThreadObjectPtr);
+        BL      listObjectWaitListInsert
                 
         LDR     R0, [SP]        ;We get R0=waitingThreadObjectPtr
                 
@@ -276,8 +276,8 @@ mailboxObjectPend
         
         MOV     R1, R2          ;R1=&runningThreadObject
         
-        ;listObjectInsert(&readyList, &runningThread);
-        BL      listObjectInsert
+        ;listObjectWaitListInsert(&readyList, &runningThread);
+        BL      listObjectWaitListInsert
         
         B       scheduler
         
@@ -316,8 +316,8 @@ message_not_available_in_the_mailbox
         ADD     R0, R0, #mailboxObject_t_waitList_offset    
                                 ;R0=&mailboxObjectPtr->waitList.
         
-        ;listObjectInsert(&mailboxObjectPtr->waitList, &runningThreadObject);
-        BL      listObjectInsert
+        ;listObjectWaitListInsert(&mailboxObjectPtr->waitList, &runningThreadObject);
+        BL      listObjectWaitListInsert
                 
         ;insert the running thread into the timerList if waitTime>0
                 
@@ -388,9 +388,9 @@ waitTime_is_zero
 ;       if(listObjectCount(&mailboxObjectPtr->waitList) > 0)
 ;       {
 ;           waitingThreadObjectPtr = 
-;                   listObjectDelete(&mailboxObjectPtr->waitList);
+;                   listObjectWaitListDelete(&mailboxObjectPtr->waitList);
 ;           assert(waitingThreadObjectPtr != NULL);
-;           listObjectInsert(readyList, waitingThreadObjectPtr);
+;           listObjectWaitListInsert(readyList, waitingThreadObjectPtr);
 ;           if(waitingThreadObjectPtr->waitTime >= 0)
 ;           {
 ;               deleteFromTimerList(waitingThreadObjectPtr);
@@ -400,7 +400,7 @@ waitTime_is_zero
 ;           {
 ;               get the context same as the end of this function and keep it
 ;               into running threadObject.
-;               listObjectInsert(&readyList, &runningThreadObject);
+;               listObjectWaitListInsert(&readyList, &runningThreadObject);
 ;               jump to scheduler();
 ;           }
 ;       }
@@ -411,7 +411,7 @@ waitTime_is_zero
 ;       {
 ;           get the context same as the starting of this function and keep
 ;           it into running threadObject
-;           listObjectInsert(&mailboxObjectPtr->waitList, &runningThreadObject);
+;           listObjectWaitListInsert(&mailboxObjectPtr->waitList, &runningThreadObject);
 ;           if(waitTime > 0)
 ;           {
 ;               insertIntoTimerList(&runningThread, 
@@ -519,8 +519,8 @@ mailboxObjectPostCopy   MEMCPY      R12, R2, R3, R1
                                     ;to make function call from here.
         
         ;waitingThreadObjectPtr = 
-        ;               listObjectDelete(&mailboxObjectPtr->waitList);
-        BL      listObjectDelete    ;After this function R0 = 
+        ;               listObjectWaitListDelete(&mailboxObjectPtr->waitList);
+        BL      listObjectWaitListDelete    ;After this function R0 = 
                                     ;waitingThreadObjectPtr
         
         STMFD   SP!, {R0}           ;save waitingThreadObjectPtr to make 
@@ -530,8 +530,8 @@ mailboxObjectPostCopy   MEMCPY      R12, R2, R3, R1
         
         LDR     R0, =readyList      ;R0=&readyList
         
-        ;listObjectInsert(readyList, waitingThreadObjectPtr);
-        BL      listObjectInsert
+        ;listObjectWaitListInsert(readyList, waitingThreadObjectPtr);
+        BL      listObjectWaitListInsert
                 
         LDR     R0, [SP]            ;We get R0=waitingThreadObjectPtr
                 
@@ -600,8 +600,8 @@ mailboxObjectPostCopy   MEMCPY      R12, R2, R3, R1
         
         MOV     R1, R2              ;R1=&runningThread
         
-        ;listObjectInsert(&readyList, &runningThreadObject);
-        BL      listObjectInsert
+        ;listObjectWaitListInsert(&readyList, &runningThreadObject);
+        BL      listObjectWaitListInsert
         
         B       scheduler
         
@@ -639,8 +639,8 @@ enough_space_not_available_in_the_mailbox
         ADD     R0, R0, #mailboxObject_t_waitList_offset    
                                     ;R0=&mailboxObjectPtr->waitList.
         
-        ;listObjectInsert(&mailboxObjectPtr->waitList, &runningThreadObject);
-        BL      listObjectInsert
+        ;listObjectWaitListInsert(&mailboxObjectPtr->waitList, &runningThreadObject);
+        BL      listObjectWaitListInsert
                 
         ;insert the running thread into the timerList if waitTime>0
                 

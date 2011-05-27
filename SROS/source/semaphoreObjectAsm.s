@@ -2,8 +2,8 @@
 			INCLUDE rtosAsm.h
             
             IMPORT  runningThreadObjectPtr
-            IMPORT  listObjectInsert
-            IMPORT  listObjectDelete
+            IMPORT  listObjectWaitListInsert
+            IMPORT  listObjectWaitListDelete
             IMPORT  readyList
             IMPORT  oldCPSR
             IMPORT  scheduler
@@ -37,7 +37,7 @@
 ;       {
 ;           get the context same as start of the thread into 
 ;           runningThreadObject.
-;           listObjectInsert(&semaphoreObjectPtr->waitList,
+;           listObjectWaitListInsert(&semaphoreObjectPtr->waitList,
 ;                                    &runningThreadObject);
 ;           if(waitTime > 0)
 ;           {
@@ -116,8 +116,8 @@ semaphoreObjectPend
             
             MOV         R1, R3      ;R1=&runningThreadObjectPtr
             
-            BL          listObjectInsert    
-                                    ;listObjectInsert()
+            BL          listObjectWaitListInsert    
+                                    ;listObjectWaitListInsert()
             
             LDR         R0, =runningThreadObjectPtr         
                                     ;R0=&&runningThreadObject
@@ -166,9 +166,9 @@ semaphore_count_greater_than_0
 ;   if(listObjectCount(&semaphoreObjectPtr->waitList) > 0)
 ;   {
 ;       waitingThreadObjectPtr = 
-;                   listObjectDelete(semaphoreObjectPtr->waitList);
+;                   listObjectWaitListDelete(semaphoreObjectPtr->waitList);
 ;       assert(waitingThreadObjectPtr != NULL);
-;       listObjectInsert(readyList, waitingThreadObjectPtr);
+;       listObjectWaitListInsert(readyList, waitingThreadObjectPtr);
 ;       if(waitingThreadObjectPtr->waitTime >= 0)
 ;       {
 ;           deleteFromTimerList(waitingThreadObjectPtr);
@@ -178,7 +178,7 @@ semaphore_count_greater_than_0
 ;       {
 ;           get the context same as the end of this function
 ;           and keep that into the running threadObject.
-;           listObjectInsert(&readyList, &runningThreadObject);
+;           listObjectWaitListInsert(&readyList, &runningThreadObject);
 ;           jump to scheduler();
 ;       }
 ;   }
@@ -215,8 +215,8 @@ semaphoreObjectPost
                                 ;making function call.
             
             ;waitingThreadObjectPtr = 
-            ;               listObjectDelete(semaphoreObjectPtr->waitList);
-            BL      listObjectDelete 
+            ;               listObjectWaitListDelete(semaphoreObjectPtr->waitList);
+            BL      listObjectWaitListDelete 
                                 ;After this function call R0 holds 
                                 ;waitingThreadObjectPtr.
             
@@ -227,8 +227,8 @@ semaphoreObjectPost
             
             LDR     R0, =readyList  ;R0=&readyList
             
-            ;listObjectInsert(readyList, waitingThreadObjectPtr);
-            BL      listObjectInsert
+            ;listObjectWaitListInsert(readyList, waitingThreadObjectPtr);
+            BL      listObjectWaitListInsert
             
             LDR     R0, [SP]        ;We get R0=waitingThreadObjectPtr
             
@@ -292,8 +292,8 @@ semaphoreObjectPost
             
             LDR     R0, =readyList          ;R0=&readyList.
             
-            ;listObjectInsert(&readyList, &runningThread);
-            BL      listObjectInsert
+            ;listObjectWaitListInsert(&readyList, &runningThread);
+            BL      listObjectWaitListInsert
             
             B       scheduler
             

@@ -3,8 +3,8 @@
             
             IMPORT  runningThreadObjectPtr
             IMPORT  listObjectInit
-            IMPORT  listObjectInsert
-            IMPORT  listObjectDelete
+            IMPORT  listObjectWaitListInsert
+            IMPORT  listObjectWaitListDelete
             IMPORT  readyList
             IMPORT  irq_interrupt_service_routine
             IMPORT  is_thread_switch_needed
@@ -164,7 +164,7 @@ block
             
             LDR     R0, =readyList
 
-            BL      listObjectInsert 
+            BL      listObjectWaitListInsert 
                                         ;insert the running threadObject 
                                         ;into the readyList.
                                     
@@ -259,7 +259,7 @@ sleep
 ;
 ;   disableInterrupts();
 ;   change the processor mode to kernel mode; (if it is not in kernel mode).
-;   threadObjectPtr = listObjectDelete(&readyList);
+;   threadObjectPtr = listObjectWaitListDelete(&readyList);
 ;   
 ;   load the context in the threadObjectPtr.
 ;   start running from the PC in the threadObjectPtr.
@@ -404,7 +404,7 @@ irq_interrupt_handler
                                 ;Note that previously R0=&runningThread.R[2]
         
         ;now insert the runningThread into readyList.
-        ;listObjectInsert(listObject_t *listNodePtr, void *newElement)
+        ;listObjectWaitListInsert(listObject_t *listNodePtr, void *newElement)
         
         SUB     R1, R0, #(2*4)          
                                 ;R1=&runningThread
@@ -412,7 +412,7 @@ irq_interrupt_handler
         LDR     R0, =readyList          
                                 ;R0=&readyList.
         
-        BL      listObjectInsert        
+        BL      listObjectWaitListInsert        
                                 ;insert the interrupted threadObject into the 
                                 ;readyList.
         
@@ -422,11 +422,11 @@ irq_interrupt_handler
 start_high_priority_thread
         
         ;get the new thread object to be started.
-        ;threadObject = void *listObjectDelete(listObject_t *listObjectPtr);
+        ;threadObject = void *listObjectWaitListDelete(listObject_t *listObjectPtr);
 
         LDR     R0, =readyList
         
-        BL      listObjectDelete
+        BL      listObjectWaitListDelete
                                 ;get the high priority thread to be run. 
                                 ;After this function R0 holds the 
                                 ;&threadObject
@@ -493,14 +493,14 @@ start_high_priority_thread
 ;   threadObjectPtr->threadObjectName = threadObjectName;
 ;   interruptDisable();
 ;
-;   listObjectInsert(&readyList, threadObjectPtr);
+;   listObjectWaitListInsert(&readyList, threadObjectPtr);
 ;   
 ;   if(priority < runningThreadObjectPtr->priority &&
 ;           context switch is allowed)
 ;   {
 ;       get the context of running thread functionally equivalent to end of
 ;       this function.
-;       listObjectInsert(&readyList, 
+;       listObjectWaitListInsert(&readyList, 
 ;                       runningThreadObjectPtr);
 ;       jump to scheduler().
 ;   }
@@ -608,8 +608,8 @@ threadObjectName_offset EQU 20
             
             STMFD   SP!, {R12,LR}
             
-            ;listObjectInsert(&readyList, threadObject);
-            BL      listObjectInsert
+            ;listObjectWaitListInsert(&readyList, threadObject);
+            BL      listObjectWaitListInsert
 
             ;check if scheduler is started. If scheduler is not started
             ;then runningThreadObjectPtr = 0.

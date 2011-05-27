@@ -103,11 +103,7 @@ void listObjectInsert(listObject_t *listNodePtr,
     int32 newThreadObjectTime;
     
     assert(newThreadObject != 0);
-    assert(newThreadObject->waitListResource == 0);
     assert(listNodePtr != 0);
-    
-    //note the list pointer into the threadObject.
-    newThreadObject->waitListResource = listNodePtr;
     
     newThreadObjectPriority = newThreadObject->priority;
     newThreadObjectTime = newThreadObject->timePart;//Current time remaining
@@ -148,6 +144,24 @@ void listObjectInsert(listObject_t *listNodePtr,
 
 /*
 Description:
+This function insert a new listNode into the wait list. The linked
+is added as the thread's wait list, then listObjectInsert is called.
+*/
+void listObjectWaitListInsert(listObject_t *listNodePtr, 
+                    threadObject_t *newThreadObject)
+{
+    assert(newThreadObject != 0);
+    assert(newThreadObject->waitListResource == 0);
+    assert(listNodePtr != 0);
+    
+    //note the list pointer into the threadObject.
+    newThreadObject->waitListResource = listNodePtr;
+    
+    listObjectInsert(listNodePtr,newThreadObject);
+}
+
+/*
+Description:
 This function delete the first listNode from the linked list
 and return the threadObject (i.e. "element") in the listNode.
 */
@@ -175,6 +189,29 @@ threadObject_t *listObjectDelete(listObject_t *listObjectPtr)
     //free the removed listNode.
     listNodeFree(freedListNodePtr);
     
+    //return the threadObject (i.e. element) available
+    //in the first listNode (which is deleted).
+
+    return element;
+}
+
+/*
+Description:
+This function delete the first listNode from the wait list
+and return the threadObject (i.e. "element") in the listNode.
+*/
+threadObject_t *listObjectWaitListDelete(listObject_t *listObjectPtr)
+{
+    threadObject_t *element;
+    
+    assert(listObjectPtr != 0);
+    assert(listObjectPtr->nextListNode != 0);
+    assert(listObjectPtr->auxInfo > 0);
+
+    //Delete the head of the list
+    element = listObjectDelete(listObjectPtr);
+
+    
     assert(element->waitListResource == listObjectPtr);
     
     //make the waitListResource pointer in the thread object equal to null.
@@ -191,18 +228,17 @@ Description:
 This function delete the node that is holding the threadObject given as input.
 The node that is holding the threadObject can be anywhere in the listObject.
 */
-void listObjectDeleteMiddle(listObject_t *waitList, 
+void listObjectDeleteMiddle(listObject_t *listObjectPtr, 
                             threadObject_t *threadObjectToBeDeleted)
 {
     listObject_t *listNodePtr, *freedListNodePtr;
     int i;
     
     assert(threadObjectToBeDeleted != 0);
-    assert(threadObjectToBeDeleted->waitListResource == waitList);
-    assert(waitList->auxInfo > 0);
+    assert(listObjectPtr->auxInfo > 0);
     
-    listNodePtr = waitList;
-    for(i=0; i<waitList->auxInfo; i++)
+    listNodePtr = listObjectPtr;
+    for(i=0; i<listObjectPtr->auxInfo; i++)
     {
         if(listNodePtr->nextListNode->element == threadObjectToBeDeleted)
         {
@@ -212,12 +248,8 @@ void listObjectDeleteMiddle(listObject_t *waitList,
             
             listNodeFree(freedListNodePtr);
             
-            waitList->auxInfo--;
+            listObjectPtr->auxInfo--;
             
-            //make the waitListResource pointer in the thread object equal
-            //to null.
-            threadObjectToBeDeleted->waitListResource = 0;
-
             break;
         }
         else
@@ -226,6 +258,29 @@ void listObjectDeleteMiddle(listObject_t *waitList,
         }
     }
     
+    //Assert that it was in the list.
+    assert( i < listObjectPtr->auxInfo);
+    
+    return;
+}
+
+/*
+Description:
+This function delete the node that is holding the threadObject given as input.
+The node that is holding the threadObject can be anywhere in the waitList.
+*/
+void listObjectWaitListDeleteMiddle(listObject_t *waitList, 
+                            threadObject_t *threadObjectToBeDeleted)
+{
+    assert(threadObjectToBeDeleted != 0);
+    assert(threadObjectToBeDeleted->waitListResource == waitList);
+    assert(waitList->auxInfo > 0);
+    
+    listObjectDeleteMiddle(waitList,threadObjectToBeDeleted);
+
+    //make the waitListResource pointer in the thread object equal
+    //to null.
+    threadObjectToBeDeleted->waitListResource = 0;
     
     return;
 }
@@ -468,7 +523,7 @@ void timerTick(void)
                 //(mutex/semaphore/mailBox).
                 if(freedListNodePtr->auxInfo != 0)
                 {
-                    listObjectDeleteMiddle((listObject_t *)(freedListNodePtr->auxInfo),
+                    listObjectWaitListDeleteMiddle((listObject_t *)(freedListNodePtr->auxInfo),
                                             freedListNodePtr->element);
                 }
                 
@@ -478,7 +533,7 @@ void timerTick(void)
                 freedListNodePtr->element->waitListTimer = 0;
                 
                 //insert the threadObject into readyList.
-                listObjectInsert(&readyList, freedListNodePtr->element);
+                listObjectWaitListInsert(&readyList, freedListNodePtr->element);
                 
                 //free the listNode.
                 listNodeFree(freedListNodePtr);
@@ -515,7 +570,7 @@ void threadObjectDestroy(threadObject_t *threadObjectPtr)
     {
         assert(threadObjectPtr->waitListResource->auxInfo > 0);
         
-        listObjectDeleteMiddle(threadObjectPtr->waitListResource, \
+        listObjectWaitListDeleteMiddle(threadObjectPtr->waitListResource, \
                                 threadObjectPtr);
     }
     
@@ -527,7 +582,7 @@ void threadObjectDestroy(threadObject_t *threadObjectPtr)
     }
 
     for (i=0; i<threadObjectPtr->promotionList.auxInfo; ++i) {
-	    listObjectDelete(&(threadObjectPtr->promotionList));
+	    listObjectWaitListDelete(&(threadObjectPtr->promotionList));
     }
     
     interrupt_restore();
