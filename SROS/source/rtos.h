@@ -44,7 +44,9 @@ typedef struct _threadObject_
 
     uint32 innatePriority;
 
-    struct _listObject_ promotionList;
+    struct _threadObject_ *promotee;
+
+    struct _listObject_ promoterList;
 
 }threadObject_t;
 
@@ -133,6 +135,9 @@ int32 mailboxObjectPend(mailboxObject_t *mailboxObjectPtr,
 int32 mailboxObjectPost(mailboxObject_t *mailboxObjectPtr,
                   int32 waitFlag,
                   void *message);
+
+void promote(threadObject_t* promoter, threadObject_t* promotee);
+void revoke(threadObject_t* promoter, threadObject_t* promotee);
 
 void scheduler(void);       //This function never returns.
 void rtosInit(void);

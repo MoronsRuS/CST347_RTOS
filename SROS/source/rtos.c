@@ -583,4 +583,56 @@ void semaphoreObjectInit(semaphoreObject_t *semaphoreObjectPtr,
     listObjectInit(&(semaphoreObjectPtr->waitList));
 }
 
+void promote(threadObject_t* promoter, threadObject_t* promotee) {
+	uint32	headPriority;
+	assert(promoter != 0);
+	assert(promotee != 0);
+	assert(promotee != runningThreadObjectPtr);
+	assert(promoter->promotee == 0);
+	if (promotee->innatePriority < promoter->priority) {
+	//If the promotee's innate priority is lower than our current
+	//priority, we need to go on the promoter list.
+		listObjectWaitListInsert(
+			&(promotee->promoterList),
+			promoter
+		);
+		promoter->promotee = promotee;
+		if (promotee->priority < promoter->priority) {
+			promotee->priority = promoter->priority;
+			//promotee's priority has changed.
+			listObjectWaitListDeleteMiddle(
+				&(promotee->promoterList),promoter
+			);
+			//Reinsert them into their correct place in their resource
+			//list.
+			listObjectWaitListInsert(
+				&(promotee->promoterList),
+				promoter
+			);
+			while (promotee->promotee) {
+				//If the promotee has promoted someone.
+				//Iterate down the chain of promotees.
+				promoter = promotee;
+				promotee = promotee->promotee;
+				//Remove this promoter from the promotees list, because
+				//their priority has changed.
+				listObjectWaitListDeleteMiddle(
+					&(promotee->promoterList),promoter
+				);
+				//Reinsert them into their correct place in the list.
+				listObjectWaitListInsert(
+					&(promotee->promoterList),
+					promoter
+				);
+				//And elevate their priority
+				promotee->priority = promoter->priority;
+			}
+		}
+	}
+}
 
+void revoke(threadObject_t* promoter, threadObject_t* promotee) {
+	assert(promoter != 0);
+	assert(promotee != 0);
+	assert(promoter->promotee == promotee);
+}
