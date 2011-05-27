@@ -89,10 +89,6 @@ void listObjectInit(listObject_t *listObjectPtr);
 
 void listObjectInsert(listObject_t *listNodePtr, threadObject_t *newThreadObject);
 
-int32 listObjectWait(listObject_t *waitListPtr, int32 waitTime, int32 returnValue);
-
-threadObject_t *listObjectSignal(listObject_t *waitListPtr, int32 returnValue);
-
 threadObject_t *listObjectDelete(listObject_t *listObjectPtr);
 
 void listObjectDeleteMiddle(listObject_t *waitList, threadObject_t *threadObjectToBeDeleted);
